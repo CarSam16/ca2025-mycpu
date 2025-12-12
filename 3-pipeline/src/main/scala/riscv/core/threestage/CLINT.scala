@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: MIT
 // MyCPU is freely redistributable under the MIT License. See the file
 // "LICENSE" for information on usage and redistribution of this file.
+// 中斷發生
+//      │
+//      ├── 1. mstatus: 關中斷、備份 MIE→MPIE
+//      │
+//     ├── 2. mepc: 記錄目前 PC
+//      │
+//      ├── 3. mcause: 寫入中斷原因
+//      │
+//跳到 mtvec（中斷服務程式）
 
 package riscv.core.threestage
 
