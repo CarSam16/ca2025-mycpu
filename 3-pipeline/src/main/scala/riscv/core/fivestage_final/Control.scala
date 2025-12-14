@@ -104,11 +104,13 @@ class Control extends Module {
     // 3. AND destination register is not x0
     // 4. AND destination register conflicts with ID source registers
     //
-    ((io.jump_instruction_id || io.memory_read_enable_ex) && // Either:
+    (io.jump_instruction_id || io.memory_read_enable_ex) && // Either:
       // - Jump in ID needs register value, OR
       // - Load in EX (load-use hazard)
       (io.rd_ex =/= 0.U) &&                                 // Destination is not x0
-      (io.rd_ex === io.rs1_id) || (io.rd_ex === io.rs2_id)) // Destination matches ID source
+      ((io.rd_ex === io.rs1_id) || (io.rd_ex === io.rs2_id))
+      
+    // Destination matches ID source
     //
     // Examples triggering Condition 1:
     // a) Jump dependency: ADD x1, x2, x3 [EX]; JALR x0, x1, 0 [ID] → stall
@@ -128,7 +130,7 @@ class Control extends Module {
         ( io.jump_instruction_id &&                              // Jump instruction in ID
           io.memory_read_enable_mem &&                          // Load instruction in MEM
           io.rd_mem =/= 0.U &&                                  // Load destination not x0
-          (io.rd_mem === io.rs1_id) || (io.rd_mem === io.rs2_id)) // Load dest matches jump source
+          ((io.rd_mem === io.rs1_id) || (io.rd_mem === io.rs2_id))) // Load dest matches jump source
         //
         // Example triggering Condition 2:
         // LW x1, 0(x2) [MEM]; NOP [EX]; JALR x0, x1, 0 [ID]
@@ -161,32 +163,32 @@ class Control extends Module {
   // Conceptual Exercise: Answer the following questions based on the hazard
   // detection logic implemented above
   //
+  //  Hint: I provided detailed explanation in my HackMD note
+  //
   // Q1: Why do we need to stall for load-use hazards?
-  // A: [Student answer here]
+  // A: Because the data loaded from memory is not available until the MEM/WB stage, and forwarding cannot provide the correct value in time for the dependent instruction. Forwarding can only resolve hazards when the data has already been produced but not yet written back. In a load-use hazard, the data is not produced until the end of the MEM stage, making forwarding impossible. Therefore, a pipeline stall is unavoidable.
   // Hint: Consider data dependency and forwarding limitations
   //
   // Q2: What is the difference between "stall" and "flush" operations?
-  // A: [Student answer here]
+  // A: A stall freezes pipeline progress, while a flush discards incorrect or unwanted instructions by inserting bubbles.
   // Hint: Compare their effects on pipeline registers and PC
   //
   // Q3: Why does jump instruction with register dependency need stall?
-  // A: [Student answer here]
+  // A: Because the jump target address depends on a register value that is not yet available when the jump is in the ID stage.
   // Hint: When is jump target address available?
   //
   // Q4: In this design, why is branch penalty only 1 cycle instead of 2?
-  // A: [Student answer here]
+  // A: Because branch resolution is performed in the ID stage with ID-stage forwarding support.
   // Hint: Compare ID-stage vs EX-stage branch resolution
   //
   // Q5: What would happen if we removed the hazard detection logic entirely?
-  // A: [Student answer here]
+  // The processor would execute incorrect instructions due to unresolved data and control hazards, leading to incorrect program behavior.
   // Hint: Consider data hazards and control flow correctness
   //
   // Q6: Complete the stall condition summary:
-  // Stall is needed when:
-  // 1. ? (EX stage condition)
-  // 2. ? (MEM stage condition)
-  //
-  // Flush is needed when:
-  // 1. ? (Branch/Jump condition)
-  //
+  // 1. Stall is needed when:
+  // A load instruction is in the EX stage, and the following instruction depends on its result. This is the classic load-use hazard.
+  // A jump instruction in the ID stage depends on a register that is being written by a load instruction in the MEM stage. The jump target address is not yet available.
+  // 2. Flush is needed when:
+  // A branch or jump is taken and resolved in the ID stage. And, the instruction in the IF stage is on the wrong control path and must be discarded.
 }
